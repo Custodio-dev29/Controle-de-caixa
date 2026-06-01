@@ -164,6 +164,29 @@ html, body {
   display: flex;
   align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sync-status {
+  font-size: 13px;
+  color: var(--text-light);
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+}
+
+.sync-status.status-online {
+  color: var(--success);
+  border-color: #d1fae5;
+  background: #ecfdf5;
 }
 
 .user-profile {
@@ -404,6 +427,25 @@ button {
 
 .icon-btn:hover {
   background: #e5e7eb;
+}
+
+.oauth-btn {
+  background: #4285f4;
+  color: white;
+  border-color: transparent;
+}
+
+.oauth-btn:hover {
+  background: #3367d6;
+}
+
+.chart-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.05);
+  margin-bottom: 20px;
 }
 
 .close-btn:hover {

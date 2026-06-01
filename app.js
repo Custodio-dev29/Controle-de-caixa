@@ -1,15 +1,7 @@
-// ==================== CONFIGURAÇÕES ====================
+﻿// ==================== CONFIGURAÇÕES ====================
 const STORAGE_KEY = "gestaoInteligente";
 const MIN_PASSWORD_LENGTH = 6;
-
-// ==================== ESTADO ====================
-const state = {
-  isLoggedIn: false,
-  currentUser: null,
-  products: [],
-  customers: [],
-  sales: [],
-};
+const API_BASE = window.location.protocol.startsWith("http") ? `${window.location.origin}/api` : null;
 
 // ==================== DOM CACHE ====================
 const dom = {
@@ -22,6 +14,11 @@ const dom = {
   passwordError: document.getElementById("passwordError"),
   userDisplay: document.getElementById("userDisplay"),
   logoutBtn: document.getElementById("logoutBtn"),
+  googleLoginBtn: document.getElementById("googleLoginBtn"),
+  cloudBackupBtn: document.getElementById("cloudBackupBtn"),
+  syncBtn: document.getElementById("syncBtn"),
+  exportPdfBtn: document.getElementById("exportPdfBtn"),
+  syncStatus: document.getElementById("syncStatus"),
   tabButtons: document.querySelectorAll(".tab-button"),
   inventorySearch: document.getElementById("inventorySearch"),
   customerSearch: document.getElementById("customerSearch"),
@@ -56,6 +53,19 @@ const dom = {
   fifthLabel: document.getElementById("fifthLabel"),
   closeModalBtn: document.getElementById("closeModalBtn"),
   cancelBtn: document.getElementById("cancelBtn"),
+  salesChart: document.getElementById("salesChart"),
+  stockChart: document.getElementById("stockChart"),
+};
+
+const state = {
+  currentUser: null,
+  authToken: localStorage.getItem(`${STORAGE_KEY}_token`) || null,
+  products: [],
+  customers: [],
+  sales: [],
+  syncStatus: "offline",
+  apiAvailable: Boolean(API_BASE),
+  lastSync: null,
 };
 
 // ==================== AUTENTICAÇÃO ====================
@@ -70,40 +80,6 @@ function validatePassword(password) {
 function clearLoginErrors() {
   dom.emailError.textContent = "";
   dom.passwordError.textContent = "";
-}
-
-function handleLogin(e) {
-  e.preventDefault();
-  clearLoginErrors();
-
-  const email = dom.loginEmail.value.trim();
-  const password = dom.loginPassword.value;
-
-  if (!validateEmail(email)) {
-    dom.emailError.textContent = "Email inválido";
-    return;
-  }
-
-  if (!validatePassword(password)) {
-    dom.passwordError.textContent = `Mínimo ${MIN_PASSWORD_LENGTH} caracteres`;
-    return;
-  }
-
-  state.currentUser = { email, name: email.split("@")[0] };
-  localStorage.setItem(`${STORAGE_KEY}_user`, JSON.stringify(state.currentUser));
-  showApp();
-  loadData();
-  render();
-  dom.loginForm.reset();
-}
-
-function handleLogout() {
-  if (confirm("Deseja sair?")) {
-    localStorage.removeItem(`${STORAGE_KEY}_user`);
-    state.isLoggedIn = false;
-    state.currentUser = null;
-    showLogin();
-  }
 }
 
 function showLogin() {
@@ -127,9 +103,9 @@ function loadData() {
     state.sales = data.sales || [];
   } else {
     state.products = [
-      { id: "p1", name: "Camiseta básica", sku: "SKU-001", quantity: 38, price: 49.90, category: "Vestuário" },
-      { id: "p2", name: "Calculadora financeira", sku: "SKU-002", quantity: 14, price: 129.90, category: "Eletrônicos" },
-      { id: "p3", name: "Caderno A4", sku: "SKU-003", quantity: 120, price: 8.50, category: "Papelaria" },
+      { id: "p1", name: "Camiseta básica", sku: "SKU-001", quantity: 38, price: 49.9, category: "Vestuário" },
+      { id: "p2", name: "Calculadora financeira", sku: "SKU-002", quantity: 14, price: 129.9, category: "Eletrônicos" },
+      { id: "p3", name: "Caderno A4", sku: "SKU-003", quantity: 120, price: 8.5, category: "Papelaria" },
     ];
     state.customers = [
       { id: "c1", name: "Ana Souza", email: "ana.souza@mail.com", phone: "(11) 91234-5678", city: "São Paulo", status: "Ativo" },
@@ -141,11 +117,10 @@ function loadData() {
 }
 
 function saveData() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
-    products: state.products,
-    customers: state.customers,
-    sales: state.sales,
-  }));
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({ products: state.products, customers: state.customers, sales: state.sales })
+  );
 }
 
 // ==================== UTILITÁRIOS ====================
@@ -159,17 +134,17 @@ function formatDate(date) {
 
 const validators = {
   product: {
-    name: (v) => v.length >= 3 ? "" : "Mínimo 3 caracteres",
-    sku: (v) => v.length >= 3 ? "" : "Mínimo 3 caracteres",
-    quantity: (v) => Number(v) >= 0 ? "" : "Deve ser positivo",
-    price: (v) => Number(v) > 0 ? "" : "Deve ser maior que 0",
-    category: (v) => v.length >= 2 ? "" : "Mínimo 2 caracteres",
+    name: (v) => (v.length >= 3 ? "" : "Mínimo 3 caracteres"),
+    sku: (v) => (v.length >= 3 ? "" : "Mínimo 3 caracteres"),
+    quantity: (v) => (Number(v) >= 0 ? "" : "Deve ser positivo"),
+    price: (v) => (Number(v) > 0 ? "" : "Deve ser maior que 0"),
+    category: (v) => (v.length >= 2 ? "" : "Mínimo 2 caracteres"),
   },
   customer: {
-    name: (v) => v.length >= 3 ? "" : "Mínimo 3 caracteres",
-    email: (v) => validateEmail(v) ? "" : "Email inválido",
-    phone: (v) => v.replace(/\D/g, "").length >= 10 ? "" : "Mínimo 10 dígitos",
-    city: (v) => v.length >= 2 ? "" : "Mínimo 2 caracteres",
+    name: (v) => (v.length >= 3 ? "" : "Mínimo 3 caracteres"),
+    email: (v) => (validateEmail(v) ? "" : "Email inválido"),
+    phone: (v) => (v.replace(/\D/g, "").length >= 10 ? "" : "Mínimo 10 dígitos"),
+    city: (v) => (v.length >= 2 ? "" : "Mínimo 2 caracteres"),
   },
 };
 
@@ -178,16 +153,138 @@ function validateField(type, field, value) {
   return validator ? validator(value) : "";
 }
 
+function generateId(prefix) {
+  return `${prefix}${Date.now()}${Math.floor(Math.random() * 1000)}`;
+}
+
+function showNotification(message, type = "info") {
+  console.log(`${type.toUpperCase()}: ${message}`);
+  alert(message);
+}
+
+// ==================== BACKEND / API ====================
+function apiRequest(path, options = {}) {
+  if (!state.apiAvailable) {
+    return Promise.reject(new Error("API não disponível. Execute o servidor Node para usar integração backend."));
+  }
+
+  const { method = "GET", body } = options;
+  const headers = { "Content-Type": "application/json" };
+  if (state.authToken) {
+    headers.Authorization = `Bearer ${state.authToken}`;
+  }
+
+  return fetch(`${API_BASE}${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  }).then(async (response) => {
+    const raw = await response.text();
+    const data = raw ? JSON.parse(raw) : {};
+    if (!response.ok) {
+      throw new Error(data.error || `Erro ${response.status}`);
+    }
+    return data;
+  });
+}
+
+async function checkApiHealth() {
+  if (!state.apiAvailable) {
+    setSyncStatus(false);
+    return;
+  }
+
+  try {
+    await apiRequest("/health");
+    setSyncStatus(true);
+  } catch (error) {
+    setSyncStatus(false);
+  }
+}
+
+function setSyncStatus(online) {
+  state.syncStatus = online ? "online" : "offline";
+  dom.syncStatus.textContent = online ? "Conectado" : "Offline";
+  dom.syncStatus.classList.toggle("status-online", online);
+  dom.cloudBackupBtn.disabled = !online;
+  dom.syncBtn.disabled = !online;
+}
+
+function authenticateBackend(email, password) {
+  return apiRequest("/auth", { method: "POST", body: { email, password } });
+}
+
+function authenticateOAuth() {
+  return apiRequest("/oauth/google", { method: "POST" });
+}
+
+async function syncData() {
+  if (!state.apiAvailable) {
+    showNotification("Sincronização não disponível em modo offline.", "warning");
+    return;
+  }
+
+  try {
+    const remote = await apiRequest("/sync");
+    state.products = remote.products || [];
+    state.customers = remote.customers || [];
+    state.sales = remote.sales || [];
+    state.lastSync = new Date();
+    saveData();
+    render();
+    showNotification("Sincronizado com backend com sucesso.");
+  } catch (error) {
+    showNotification(`Falha na sincronização: ${error.message}`, "error");
+    setSyncStatus(false);
+  }
+}
+
+async function backupToCloud() {
+  if (!state.apiAvailable) {
+    showNotification("Backup não disponível em modo offline.", "warning");
+    return;
+  }
+
+  try {
+    await apiRequest("/backup", {
+      method: "POST",
+      body: { products: state.products, customers: state.customers, sales: state.sales },
+    });
+    showNotification("Backup enviado para a nuvem com sucesso.");
+  } catch (error) {
+    showNotification(`Falha no backup: ${error.message}`, "error");
+  }
+}
+
+async function fetchRemoteState() {
+  if (!state.apiAvailable) {
+    return;
+  }
+
+  try {
+    const remote = await apiRequest("/sync");
+    state.products = remote.products || state.products;
+    state.customers = remote.customers || state.customers;
+    state.sales = remote.sales || state.sales;
+    state.lastSync = new Date();
+    saveData();
+    render();
+    showNotification("Dados carregados do backend remoto.");
+  } catch (error) {
+    console.warn("Falha ao carregar dados remotos:", error);
+  }
+}
+
 // ==================== RENDERIZAÇÃO ====================
 function updateSummary() {
   dom.productCount.textContent = state.products.length;
   dom.customerCount.textContent = state.customers.length;
-  dom.lowStockCount.textContent = state.products.filter(p => p.quantity < 10).length;
+  dom.lowStockCount.textContent = state.products.filter((p) => p.quantity < 10).length;
 
   const thisMonth = new Date();
   thisMonth.setDate(1);
   const salesValue = state.sales
-    .filter(s => new Date(s.date) >= thisMonth)
+    .filter((s) => new Date(s.date) >= thisMonth)
     .reduce((sum, s) => sum + s.total, 0);
   dom.monthlySales.textContent = formatCurrency(salesValue);
 }
@@ -195,10 +292,11 @@ function updateSummary() {
 function renderInventory() {
   dom.inventoryTableBody.innerHTML = "";
   const filter = dom.inventorySearch.value.toLowerCase();
-  
-  const filtered = state.products.filter(p =>
-    p.name.toLowerCase().includes(filter) ||
-    p.sku.toLowerCase().includes(filter)
+  const filtered = state.products.filter(
+    (p) =>
+      p.name.toLowerCase().includes(filter) ||
+      p.sku.toLowerCase().includes(filter) ||
+      p.category.toLowerCase().includes(filter)
   );
 
   if (!filtered.length) {
@@ -206,7 +304,7 @@ function renderInventory() {
     return;
   }
 
-  filtered.forEach(product => {
+  filtered.forEach((product) => {
     const status = product.quantity < 10 ? "Baixo" : "OK";
     const row = document.createElement("tr");
     row.innerHTML = `
@@ -228,10 +326,8 @@ function renderInventory() {
 function renderCustomers() {
   dom.customersTableBody.innerHTML = "";
   const filter = dom.customerSearch.value.toLowerCase();
-  
-  const filtered = state.customers.filter(c =>
-    c.name.toLowerCase().includes(filter) ||
-    c.email.toLowerCase().includes(filter)
+  const filtered = state.customers.filter(
+    (c) => c.name.toLowerCase().includes(filter) || c.email.toLowerCase().includes(filter) || c.city.toLowerCase().includes(filter)
   );
 
   if (!filtered.length) {
@@ -239,7 +335,7 @@ function renderCustomers() {
     return;
   }
 
-  filtered.forEach(customer => {
+  filtered.forEach((customer) => {
     const row = document.createElement("tr");
     row.innerHTML = `
       <td><strong>${customer.name}</strong></td>
@@ -258,16 +354,15 @@ function renderCustomers() {
 
 function renderSales() {
   dom.salesTableBody.innerHTML = "";
-  
+
   if (!state.sales.length) {
     dom.salesTableBody.innerHTML = "<tr><td colspan='7'>Nenhuma venda registrada</td></tr>";
     return;
   }
 
-  state.sales.slice().reverse().forEach(sale => {
-    const customer = state.customers.find(c => c.id === sale.customerId);
-    const product = state.products.find(p => p.id === sale.productId);
-    
+  state.sales.slice().reverse().forEach((sale) => {
+    const customer = state.customers.find((c) => c.id === sale.customerId);
+    const product = state.products.find((p) => p.id === sale.productId);
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>${formatDate(sale.date)}</td>
@@ -284,40 +379,117 @@ function renderSales() {
   });
 }
 
+function drawBarChart(canvas, labels, values, color = "#2563eb") {
+  const ctx = canvas.getContext("2d");
+  const width = canvas.width;
+  const height = canvas.height;
+  const padding = 40;
+  const maxValue = Math.max(...values, 1);
+  const barWidth = (width - padding * 2) / Math.max(values.length, 1) - 20;
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = "#f3f4f6";
+  ctx.fillRect(0, 0, width, height);
+
+  values.forEach((value, index) => {
+    const x = padding + index * (barWidth + 20);
+    const barHeight = (value / maxValue) * (height - padding * 2);
+    const y = height - padding - barHeight;
+    ctx.fillStyle = color;
+    ctx.fillRect(x, y, barWidth, barHeight);
+    ctx.fillStyle = "#1f2937";
+    ctx.font = "13px system-ui, sans-serif";
+    ctx.fillText(labels[index], x, height - padding + 18);
+    ctx.fillText(formatCurrency(value), x, y - 10);
+  });
+}
+
+function renderCharts() {
+  const totals = state.sales.reduce((acc, sale) => {
+    const product = state.products.find((p) => p.id === sale.productId);
+    if (!product) return acc;
+    acc[product.name] = (acc[product.name] || 0) + sale.total;
+    return acc;
+  }, {});
+
+  const labels = Object.keys(totals).slice(0, 6);
+  const values = labels.map((label) => totals[label]);
+  drawBarChart(dom.salesChart, labels.length ? labels : ["Sem dados"], values.length ? values : [0]);
+
+  const stockLabels = state.products
+    .slice()
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 6)
+    .map((p) => p.name);
+  const stockValues = state.products
+    .slice()
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 6)
+    .map((p) => p.quantity);
+  drawBarChart(dom.stockChart, stockLabels.length ? stockLabels : ["Sem dados"], stockValues.length ? stockValues : [0], "#10b981");
+}
+
 function renderReports() {
   const start = dom.reportStartDate.value;
   const end = dom.reportEndDate.value;
 
   if (!start || !end) {
     dom.reportsContent.innerHTML = "<p>Selecione o período para gerar o relatório.</p>";
+    renderCharts();
     return;
   }
 
-  const periodSales = state.sales.filter(s => {
-    const d = new Date(s.date).toISOString().split("T")[0];
-    return d >= start && d <= end;
+  const periodSales = state.sales.filter((sale) => {
+    const dateKey = new Date(sale.date).toISOString().split("T")[0];
+    return dateKey >= start && dateKey <= end;
   });
 
-  const total = periodSales.reduce((sum, s) => sum + s.total, 0);
-  const qty = periodSales.reduce((sum, s) => sum + s.quantity, 0);
+  const total = periodSales.reduce((sum, sale) => sum + sale.total, 0);
+  const qty = periodSales.reduce((sum, sale) => sum + sale.quantity, 0);
 
   let html = `
     <div class="report-content">
       <h4>Período: ${formatDate(start)} até ${formatDate(end)}</h4>
       <p><strong>Total de Vendas:</strong> ${periodSales.length}</p>
       <p><strong>Receita:</strong> ${formatCurrency(total)}</p>
-      <p><strong>Itens:</strong> ${qty}</p>
+      <p><strong>Itens vendidos:</strong> ${qty}</p>
       <ul>
   `;
 
-  periodSales.forEach(s => {
-    const c = state.customers.find(x => x.id === s.customerId);
-    const p = state.products.find(x => x.id === s.productId);
-    html += `<li>${formatDate(s.date)} - ${c?.name}: ${s.quantity}x ${p?.name} = ${formatCurrency(s.total)}</li>`;
+  periodSales.forEach((sale) => {
+    const customer = state.customers.find((c) => c.id === sale.customerId);
+    const product = state.products.find((p) => p.id === sale.productId);
+    html += `<li>${formatDate(sale.date)} - ${customer?.name || "?"}: ${sale.quantity}x ${product?.name || "?"} = ${formatCurrency(sale.total)}</li>`;
   });
 
   html += "</ul></div>";
   dom.reportsContent.innerHTML = html;
+  renderCharts();
+}
+
+function exportReportAsPdf() {
+  const printWindow = window.open("", "_blank");
+  const html = `
+    <html>
+      <head>
+        <title>Relatório</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 24px; }
+          h1, h2, h3, h4 { color: #1f2937; }
+          ul { padding-left: 20px; }
+          li { margin-bottom: 8px; }
+        </style>
+      </head>
+      <body>
+        <h1>Relatório de Vendas</h1>
+        ${dom.reportsContent.innerHTML}
+      </body>
+    </html>
+  `;
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
 }
 
 function render() {
@@ -343,13 +515,13 @@ function openModal(type, id = "") {
     dom.fifthLabel.textContent = "Categoria";
 
     if (isEdit) {
-      const p = state.products.find(x => x.id === id);
-      if (p) {
-        dom.fieldName.value = p.name;
-        dom.fieldSecond.value = p.sku;
-        dom.fieldThird.value = p.quantity;
-        dom.fieldFourth.value = p.price;
-        dom.fieldFifth.value = p.category;
+      const product = state.products.find((x) => x.id === id);
+      if (product) {
+        dom.fieldName.value = product.name;
+        dom.fieldSecond.value = product.sku;
+        dom.fieldThird.value = product.quantity;
+        dom.fieldFourth.value = product.price;
+        dom.fieldFifth.value = product.category;
       }
     } else {
       dom.recordForm.reset();
@@ -363,13 +535,13 @@ function openModal(type, id = "") {
     dom.fifthLabel.textContent = "Status";
 
     if (isEdit) {
-      const c = state.customers.find(x => x.id === id);
-      if (c) {
-        dom.fieldName.value = c.name;
-        dom.fieldSecond.value = c.email;
-        dom.fieldThird.value = c.phone;
-        dom.fieldFourth.value = c.city;
-        dom.fieldFifth.value = c.status;
+      const customer = state.customers.find((x) => x.id === id);
+      if (customer) {
+        dom.fieldName.value = customer.name;
+        dom.fieldSecond.value = customer.email;
+        dom.fieldThird.value = customer.phone;
+        dom.fieldFourth.value = customer.city;
+        dom.fieldFifth.value = customer.status;
       }
     } else {
       dom.recordForm.reset();
@@ -382,7 +554,7 @@ function closeModal() {
   dom.recordForm.reset();
 }
 
-function saveRecord() {
+async function saveRecord() {
   const type = dom.recordType.value;
   const id = dom.recordId.value;
 
@@ -396,9 +568,9 @@ function saveRecord() {
     };
 
     const errs = [];
-    for (const [k, v] of Object.entries(data)) {
-      const err = validateField("product", k, v);
-      if (err) errs.push(k + ": " + err);
+    for (const [key, value] of Object.entries(data)) {
+      const err = validateField("product", key, value);
+      if (err) errs.push(`${key}: ${err}`);
     }
 
     if (errs.length) {
@@ -407,10 +579,30 @@ function saveRecord() {
     }
 
     if (id) {
-      const idx = state.products.findIndex(p => p.id === id);
-      if (idx >= 0) state.products[idx] = { ...state.products[idx], ...data };
+      if (state.apiAvailable) {
+        try {
+          const updated = await apiRequest(`/products/${id}`, { method: "PUT", body: data });
+          state.products = state.products.map((product) => (product.id === id ? updated : product));
+        } catch (error) {
+          showNotification(`Erro ao atualizar produto: ${error.message}`, "error");
+          return;
+        }
+      } else {
+        const idx = state.products.findIndex((p) => p.id === id);
+        if (idx >= 0) state.products[idx] = { ...state.products[idx], ...data };
+      }
     } else {
-      state.products.push({ id: `p${Date.now()}`, ...data });
+      if (state.apiAvailable) {
+        try {
+          const created = await apiRequest("/products", { method: "POST", body: data });
+          state.products.push(created);
+        } catch (error) {
+          showNotification(`Erro ao criar produto: ${error.message}`, "error");
+          return;
+        }
+      } else {
+        state.products.push({ id: generateId("p"), ...data });
+      }
     }
   } else {
     const data = {
@@ -422,9 +614,9 @@ function saveRecord() {
     };
 
     const errs = [];
-    for (const [k, v] of Object.entries(data)) {
-      const err = validateField("customer", k, v);
-      if (err) errs.push(k + ": " + err);
+    for (const [key, value] of Object.entries(data)) {
+      const err = validateField("customer", key, value);
+      if (err) errs.push(`${key}: ${err}`);
     }
 
     if (errs.length) {
@@ -433,10 +625,30 @@ function saveRecord() {
     }
 
     if (id) {
-      const idx = state.customers.findIndex(c => c.id === id);
-      if (idx >= 0) state.customers[idx] = { ...state.customers[idx], ...data };
+      if (state.apiAvailable) {
+        try {
+          const updated = await apiRequest(`/customers/${id}`, { method: "PUT", body: data });
+          state.customers = state.customers.map((customer) => (customer.id === id ? updated : customer));
+        } catch (error) {
+          showNotification(`Erro ao atualizar cliente: ${error.message}`, "error");
+          return;
+        }
+      } else {
+        const idx = state.customers.findIndex((c) => c.id === id);
+        if (idx >= 0) state.customers[idx] = { ...state.customers[idx], ...data };
+      }
     } else {
-      state.customers.push({ id: `c${Date.now()}`, ...data });
+      if (state.apiAvailable) {
+        try {
+          const created = await apiRequest("/customers", { method: "POST", body: data });
+          state.customers.push(created);
+        } catch (error) {
+          showNotification(`Erro ao criar cliente: ${error.message}`, "error");
+          return;
+        }
+      } else {
+        state.customers.push({ id: generateId("c"), ...data });
+      }
     }
   }
 
@@ -445,22 +657,46 @@ function saveRecord() {
   closeModal();
 }
 
-function deleteRecord(type, id) {
+async function deleteRecord(type, id) {
   if (!confirm("Tem certeza?")) return;
 
   if (type === "product") {
-    state.products = state.products.filter(p => p.id !== id);
+    if (state.apiAvailable) {
+      try {
+        await apiRequest(`/products/${id}`, { method: "DELETE" });
+      } catch (error) {
+        showNotification(`Erro ao remover produto: ${error.message}`, "error");
+        return;
+      }
+    }
+    state.products = state.products.filter((p) => p.id !== id);
   } else if (type === "customer") {
-    state.customers = state.customers.filter(c => c.id !== id);
+    if (state.apiAvailable) {
+      try {
+        await apiRequest(`/customers/${id}`, { method: "DELETE" });
+      } catch (error) {
+        showNotification(`Erro ao remover cliente: ${error.message}`, "error");
+        return;
+      }
+    }
+    state.customers = state.customers.filter((c) => c.id !== id);
   } else if (type === "sale") {
-    state.sales = state.sales.filter(s => s.id !== id);
+    if (state.apiAvailable) {
+      try {
+        await apiRequest(`/sales/${id}`, { method: "DELETE" });
+      } catch (error) {
+        showNotification(`Erro ao remover venda: ${error.message}`, "error");
+        return;
+      }
+    }
+    state.sales = state.sales.filter((s) => s.id !== id);
   }
 
   saveData();
   render();
 }
 
-function recordSale() {
+async function recordSale() {
   if (!state.customers.length || !state.products.length) {
     alert("Cadastre clientes e produtos primeiro");
     return;
@@ -472,23 +708,35 @@ function recordSale() {
 
   if (!customerId || !productId || !qty) return;
 
-  const customer = state.customers.find(c => c.id === customerId);
-  const product = state.products.find(p => p.id === productId);
+  const customer = state.customers.find((c) => c.id === customerId);
+  const product = state.products.find((p) => p.id === productId);
 
   if (!customer || !product || qty <= 0 || qty > product.quantity) {
     alert("Dados inválidos ou estoque insuficiente");
     return;
   }
 
-  state.sales.push({
-    id: `s${Date.now()}`,
+  const sale = {
+    id: generateId("s"),
     date: new Date().toISOString(),
     customerId,
     productId,
     quantity: qty,
     total: product.price * qty,
     type: "sale",
-  });
+  };
+
+  if (state.apiAvailable) {
+    try {
+      const created = await apiRequest("/sales", { method: "POST", body: sale });
+      state.sales.push(created);
+    } catch (error) {
+      showNotification(`Erro ao registrar venda: ${error.message}`, "error");
+      return;
+    }
+  } else {
+    state.sales.push(sale);
+  }
 
   product.quantity -= qty;
   saveData();
@@ -496,23 +744,25 @@ function recordSale() {
   alert("Venda registrada: " + formatCurrency(product.price * qty));
 }
 
-// ==================== EVENTOS ====================
 function setupEventListeners() {
   dom.loginForm.addEventListener("submit", handleLogin);
   dom.logoutBtn.addEventListener("click", handleLogout);
+  dom.googleLoginBtn.addEventListener("click", handleOAuthLogin);
+  dom.cloudBackupBtn.addEventListener("click", backupToCloud);
+  dom.syncBtn.addEventListener("click", syncData);
+  dom.exportPdfBtn.addEventListener("click", exportReportAsPdf);
 
-  dom.tabButtons.forEach(btn => {
+  dom.tabButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
-      dom.tabButtons.forEach(b => b.classList.remove("active"));
+      dom.tabButtons.forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
-      document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+      document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
       document.getElementById(btn.dataset.panel).classList.add("active");
     });
   });
 
   dom.inventorySearch.addEventListener("input", renderInventory);
   dom.customerSearch.addEventListener("input", renderCustomers);
-
   dom.newProductBtn.addEventListener("click", () => openModal("product"));
   dom.newCustomerBtn.addEventListener("click", () => openModal("customer"));
   dom.newSaleBtn.addEventListener("click", recordSale);
@@ -523,22 +773,119 @@ function setupEventListeners() {
   dom.modalOverlay.addEventListener("click", (e) => {
     if (e.target === dom.modalOverlay) closeModal();
   });
-  dom.recordForm.addEventListener("submit", (e) => {
+  dom.recordForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    saveRecord();
+    await saveRecord();
   });
+
+  window.addEventListener("online", () => setSyncStatus(true));
+  window.addEventListener("offline", () => setSyncStatus(false));
 }
 
-// ==================== INIT ====================
-document.addEventListener("DOMContentLoaded", () => {
+async function handleLogin(e) {
+  e.preventDefault();
+  clearLoginErrors();
+
+  const email = dom.loginEmail.value.trim();
+  const password = dom.loginPassword.value;
+
+  if (!validateEmail(email)) {
+    dom.emailError.textContent = "Email inválido";
+    return;
+  }
+
+  if (!validatePassword(password)) {
+    dom.passwordError.textContent = `Mínimo ${MIN_PASSWORD_LENGTH} caracteres`;
+    return;
+  }
+
+  if (state.apiAvailable) {
+    try {
+      const response = await authenticateBackend(email, password);
+      state.authToken = response.token;
+      state.currentUser = response.user;
+      localStorage.setItem(`${STORAGE_KEY}_user`, JSON.stringify(state.currentUser));
+      localStorage.setItem(`${STORAGE_KEY}_token`, response.token);
+      showApp();
+      loadData();
+      render();
+      dom.loginForm.reset();
+      return;
+    } catch (error) {
+      dom.passwordError.textContent = error.message;
+      return;
+    }
+  }
+
+  state.currentUser = { email, name: email.split("@")[0] };
+  localStorage.setItem(`${STORAGE_KEY}_user`, JSON.stringify(state.currentUser));
+  showApp();
+  loadData();
+  render();
+  dom.loginForm.reset();
+}
+
+async function handleOAuthLogin() {
+  if (!state.apiAvailable) {
+    showNotification("OAuth não disponível em modo offline.", "warning");
+    return;
+  }
+
+  try {
+    const response = await authenticateOAuth();
+    state.authToken = response.token;
+    state.currentUser = response.user;
+    localStorage.setItem(`${STORAGE_KEY}_user`, JSON.stringify(state.currentUser));
+    localStorage.setItem(`${STORAGE_KEY}_token`, response.token);
+    showApp();
+    loadData();
+    await fetchRemoteState();
+    render();
+  } catch (error) {
+    showNotification(`Erro OAuth: ${error.message}`, "error");
+  }
+}
+
+function handleLogout() {
+  state.currentUser = null;
+  state.authToken = null;
+  localStorage.removeItem(`${STORAGE_KEY}_user`);
+  localStorage.removeItem(`${STORAGE_KEY}_token`);
+  showLogin();
+}
+
+function registerServiceWorker() {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js").catch((error) => {
+      console.warn("Service worker não registrado:", error);
+    });
+  }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
   const user = localStorage.getItem(`${STORAGE_KEY}_user`);
   if (user) {
     state.currentUser = JSON.parse(user);
+  }
+
+  if (state.currentUser) {
     showApp();
     loadData();
     render();
   } else {
     showLogin();
   }
+
   setupEventListeners();
+  await checkApiHealth();
+  if (state.apiAvailable && state.currentUser) {
+    await fetchRemoteState();
+  }
+  registerServiceWorker();
+
+  if (state.apiAvailable) {
+    setInterval(() => {
+      if (navigator.onLine) syncData();
+    }, 30000);
+  }
 });

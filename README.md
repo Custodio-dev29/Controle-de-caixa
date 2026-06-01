@@ -88,6 +88,8 @@ Controle de caixa/
 ├── styles.css          # Estilos e layout responsivo
 ├── app.js              # Lógica e interatividade
 ├── server.js           # Servidor Node.js (opcional)
+├── manifest.webmanifest # Metadata PWA
+├── service-worker.js   # Cache offline e PWA
 └── README.md           # Este arquivo
 ```
 
@@ -110,6 +112,22 @@ node server.js
 # 4. Abra no navegador
 # http://localhost:3000
 ```
+
+### Iniciar o backend automaticamente sem terminal
+
+1. Use o arquivo `start-backend.bat` que já está neste projeto.
+2. Crie um atalho desse arquivo no Windows:
+   - Clique com o botão direito em `start-backend.bat` e escolha `Criar atalho`.
+3. Abra o Explorador e cole o atalho em:
+   - `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup`
+4. Na próxima vez que você logar no Windows, o backend iniciará automaticamente.
+
+> O servidor continuará rodando em segundo plano e você poderá acessar o app pelo navegador sem abrir o terminal.
+
+### PWA / Offline
+
+- O projeto já inclui `manifest.webmanifest` e `service-worker.js`.
+- Ao servir via Node.js, o app pode ser instalado como PWA e funciona com cache offline básico.
 
 ## 💾 Dados
 

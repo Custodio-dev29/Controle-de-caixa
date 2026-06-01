@@ -1,0 +1,75 @@
+{
+  "users": [
+    {
+      "id": "u1",
+      "name": "Administrador",
+      "email": "admin@demo.com",
+      "provider": "local"
+    },
+    {
+      "id": "u1780357721046",
+      "name": "admin",
+      "email": "admin@sistema.local",
+      "provider": "local"
+    },
+    {
+      "id": "google-user-1",
+      "name": "Usuário Google",
+      "email": "usuario.google@demo.com",
+      "provider": "google"
+    }
+  ],
+  "products": [
+    {
+      "id": "p1",
+      "name": "Camiseta básica",
+      "sku": "SKU-001",
+      "quantity": 38,
+      "price": 49.9,
+      "category": "Vestuário"
+    },
+    {
+      "id": "p2",
+      "name": "Calculadora financeira",
+      "sku": "SKU-002",
+      "quantity": 14,
+      "price": 129.9,
+      "category": "Eletrônicos"
+    },
+    {
+      "id": "p1780357788792",
+      "name": "Caneta",
+      "sku": "sku-4",
+      "quantity": 12,
+      "price": 1215.2,
+      "category": "1223"
+    }
+  ],
+  "customers": [
+    {
+      "id": "c1",
+      "name": "Ana Souza",
+      "email": "ana.souza@mail.com",
+      "phone": "(11) 91234-5678",
+      "city": "São Paulo",
+      "status": "Ativo"
+    },
+    {
+      "id": "c2",
+      "name": "Carlos Lima",
+      "email": "carlos.lima@mail.com",
+      "phone": "(21) 99876-5432",
+      "city": "Rio de Janeiro",
+      "status": "Ativo"
+    },
+    {
+      "id": "c1780355545712",
+      "name": "José",
+      "email": "jose@gmail.com.br",
+      "phone": "35999090220",
+      "city": "0.04",
+      "status": "ativo"
+    }
+  ],
+  "sales": []
+}

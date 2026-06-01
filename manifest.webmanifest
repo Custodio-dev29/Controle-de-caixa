@@ -1,0 +1,9 @@
+{
+  "name": "Gestão Inteligente",
+  "short_name": "Gestão",
+  "description": "Controle de estoque, clientes e vendas com sincronização e backup.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb"
+}

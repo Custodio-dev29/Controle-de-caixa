@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2563eb" />
   <title>Gestão Inteligente - Estoque e Clientes</title>
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -38,9 +40,11 @@
           </div>
 
           <button type="submit" class="primary-btn">Entrar</button>
+          <button type="button" class="ghost-btn oauth-btn" id="googleLoginBtn">Entrar com Google</button>
           
           <div class="login-hints">
             <p><strong>Demo:</strong> admin@demo.com | Senha: 123456</p>
+            <p>Use OAuth como demonstração quando estiver conectado ao servidor Node.</p>
           </div>
         </form>
 
@@ -60,6 +64,11 @@
         <p class="header-subtitle">Seu painel de controle</p>
       </div>
       <div class="header-actions">
+        <div class="toolbar-actions">
+          <button class="ghost-btn" id="cloudBackupBtn" title="Backup na nuvem">☁️ Backup</button>
+          <button class="ghost-btn" id="syncBtn" title="Sincronizar">🔄 Sincronizar</button>
+          <span id="syncStatus" class="sync-status">Offline</span>
+        </div>
         <div class="user-profile">
           <span id="userDisplay">Usuário</span>
           <button class="icon-btn" id="logoutBtn" title="Sair">🚪</button>
@@ -194,6 +203,7 @@
               Até: <input id="reportEndDate" type="date" />
             </label>
             <button class="primary-btn" id="generateReportBtn">📊 Gerar Relatório</button>
+            <button class="ghost-btn" id="exportPdfBtn">📄 Exportar PDF</button>
           </div>
         </div>
 
@@ -202,6 +212,16 @@
             <h3>Vendas por Período</h3>
             <div id="reportsContent">
               <p>Selecione uma data e clique em Gerar Relatório.</p>
+            </div>
+          </div>
+          <div class="reports-grid">
+            <div class="chart-card">
+              <h4>Receita por Produto</h4>
+              <canvas id="salesChart" width="600" height="320"></canvas>
+            </div>
+            <div class="chart-card">
+              <h4>Nível de Estoque</h4>
+              <canvas id="stockChart" width="600" height="320"></canvas>
             </div>
           </div>
         </div>
