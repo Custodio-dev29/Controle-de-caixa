@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gestão Inteligente - Estoque e Clientes</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Tela de Login -->
+  <div id="loginScreen" class="login-screen active">
+    <div class="login-container">
+      <div class="login-card">
+        <h1>Gestão Inteligente</h1>
+        <p class="login-subtitle">Sistema de Controle de Estoque e Clientes</p>
+        
+        <form id="loginForm" class="login-form">
+          <div class="form-group">
+            <label for="loginEmail">Email ou Usuário</label>
+            <input 
+              id="loginEmail" 
+              type="email" 
+              placeholder="seu@email.com" 
+              required 
+              pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" />
+            <span class="error-message" id="emailError"></span>
+          </div>
+
+          <div class="form-group">
+            <label for="loginPassword">Senha</label>
+            <input 
+              id="loginPassword" 
+              type="password" 
+              placeholder="••••••••" 
+              required 
+              minlength="6" />
+            <span class="error-message" id="passwordError"></span>
+          </div>
+
+          <button type="submit" class="primary-btn">Entrar</button>
+          
+          <div class="login-hints">
+            <p><strong>Demo:</strong> admin@demo.com | Senha: 123456</p>
+          </div>
+        </form>
+
+        <div class="login-footer">
+          <p>© 2026 Sistema de Gestão - Versão 1.0</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Aplicação Principal -->
+  <div id="appScreen" class="app-shell hidden">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-brand">
+        <h1>📦 Gestão Inteligente</h1>
+        <p class="header-subtitle">Seu painel de controle</p>
+      </div>
+      <div class="header-actions">
+        <div class="user-profile">
+          <span id="userDisplay">Usuário</span>
+          <button class="icon-btn" id="logoutBtn" title="Sair">🚪</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navegação por abas -->
+    <nav class="tab-bar" role="tablist">
+      <button class="tab-button active" role="tab" data-panel="inventoryPanel">📦 Estoque</button>
+      <button class="tab-button" role="tab" data-panel="customersPanel">👥 Clientes</button>
+      <button class="tab-button" role="tab" data-panel="salesPanel">💳 Vendas</button>
+      <button class="tab-button" role="tab" data-panel="reportsPanel">📊 Relatórios</button>
+    </nav>
+
+    <!-- Conteúdo principal -->
+    <main class="content">
+      <!-- Painel de resumo -->
+      <section class="summary-grid">
+        <article class="summary-card">
+          <span>📦 Produtos</span>
+          <strong id="productCount">0</strong>
+        </article>
+        <article class="summary-card">
+          <span>👥 Clientes</span>
+          <strong id="customerCount">0</strong>
+        </article>
+        <article class="summary-card">
+          <span>💳 Vendas (Mês)</span>
+          <strong id="monthlySales">R$ 0</strong>
+        </article>
+        <article class="summary-card">
+          <span>⚠️ Estoque Baixo</span>
+          <strong id="lowStockCount">0</strong>
+        </article>
+      </section>
+
+      <!-- PAINEL: Estoque -->
+      <section id="inventoryPanel" class="panel active">
+        <div class="panel-header">
+          <h2>Gerenciamento de Estoque</h2>
+          <div class="panel-actions">
+            <input id="inventorySearch" type="search" placeholder="Buscar produto..." />
+            <button class="primary-btn" id="newProductBtn">+ Novo Produto</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>SKU</th>
+                <th>Quantidade</th>
+                <th>Preço (R$)</th>
+                <th>Categoria</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryTableBody"></tbody>
+          </table>
+        </div>
+        <p class="hint">Clique em Editar para alterar ou Remover para excluir um produto.</p>
+      </section>
+
+      <!-- PAINEL: Clientes -->
+      <section id="customersPanel" class="panel">
+        <div class="panel-header">
+          <h2>Gerenciamento de Clientes</h2>
+          <div class="panel-actions">
+            <input id="customerSearch" type="search" placeholder="Buscar cliente..." />
+            <button class="primary-btn" id="newCustomerBtn">+ Novo Cliente</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Telefone</th>
+                <th>Cidade</th>
+                <th>Status</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="customersTableBody"></tbody>
+          </table>
+        </div>
+        <p class="hint">Mantenha informações atualizadas dos seus clientes.</p>
+      </section>
+
+      <!-- PAINEL: Vendas -->
+      <section id="salesPanel" class="panel">
+        <div class="panel-header">
+          <h2>Registro de Vendas e Movimentações</h2>
+          <div class="panel-actions">
+            <button class="primary-btn" id="newSaleBtn">+ Nova Venda</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Produto</th>
+                <th>Quantidade</th>
+                <th>Valor Total (R$)</th>
+                <th>Tipo</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="salesTableBody"></tbody>
+          </table>
+        </div>
+        <p class="hint">Acompanhe todas as vendas e movimentações de estoque.</p>
+      </section>
+
+      <!-- PAINEL: Relatórios -->
+      <section id="reportsPanel" class="panel">
+        <div class="panel-header">
+          <h2>Relatórios e Análises</h2>
+          <div class="panel-actions">
+            <label>
+              De: <input id="reportStartDate" type="date" />
+            </label>
+            <label>
+              Até: <input id="reportEndDate" type="date" />
+            </label>
+            <button class="primary-btn" id="generateReportBtn">📊 Gerar Relatório</button>
+          </div>
+        </div>
+
+        <div class="reports-container">
+          <div class="report-section">
+            <h3>Vendas por Período</h3>
+            <div id="reportsContent">
+              <p>Selecione uma data e clique em Gerar Relatório.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal de Formulário -->
+  <div class="modal-overlay hidden" id="modalOverlay" role="dialog" aria-modal="true">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3 id="modalTitle">Formulário</h3>
+        <button class="icon-btn close-btn" id="closeModalBtn">✕</button>
+      </div>
+      
+      <form id="recordForm" class="form-container">
+        <input type="hidden" id="recordType" />
+        <input type="hidden" id="recordId" />
+
+        <div class="form-group" id="fieldNameGroup">
+          <label for="fieldName"><span id="nameLabel">Nome</span> *</label>
+          <input id="fieldName" type="text" required />
+          <span class="error-message" id="nameError"></span>
+        </div>
+
+        <div class="form-group" id="fieldSecondGroup">
+          <label for="fieldSecond"><span id="secondLabel">Email</span> *</label>
+          <input id="fieldSecond" type="text" required />
+          <span class="error-message" id="secondError"></span>
+        </div>
+
+        <div class="form-group" id="fieldThirdGroup">
+          <label for="fieldThird"><span id="thirdLabel">Telefone</span> *</label>
+          <input id="fieldThird" type="text" />
+          <span class="error-message" id="thirdError"></span>
+        </div>
+
+        <div class="form-group" id="fieldFourthGroup">
+          <label for="fieldFourth"><span id="fourthLabel">Preço</span> *</label>
+          <input id="fieldFourth" type="number" step="0.01" />
+          <span class="error-message" id="fourthError"></span>
+        </div>
+
+        <div class="form-group" id="fieldFifthGroup">
+          <label for="fieldFifth"><span id="fifthLabel">Categoria</span> *</label>
+          <input id="fieldFifth" type="text" />
+          <span class="error-message" id="fifthError"></span>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="ghost-btn" id="cancelBtn">Cancelar</button>
+          <button type="submit" class="primary-btn">Salvar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
