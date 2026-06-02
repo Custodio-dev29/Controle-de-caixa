@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#2563eb" />
   <title>Gestão Inteligente - Estoque e Clientes</title>
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -14,7 +14,7 @@
     <div class="login-container">
       <div class="login-card">
         <h1>Gestão Inteligente</h1>
-        <p class="login-subtitle">Sistema de Controle de Estoque e Clientes</p>
+        <p class="login-subtitle">Painel moderno para estoque, clientes e vendas</p>
         
         <form id="loginForm" class="login-form">
           <div class="form-group">
@@ -44,7 +44,7 @@
           
           <div class="login-hints">
             <p><strong>Demo:</strong> admin@demo.com | Senha: 123456</p>
-            <p>Use OAuth como demonstração quando estiver conectado ao servidor Node.</p>
+            <p>Conecte-se ao servidor backend para testar login e sincronização.</p>
           </div>
         </form>
 
@@ -60,14 +60,15 @@
     <!-- Header -->
     <header class="app-header">
       <div class="header-brand">
-        <h1>📦 Gestão Inteligente</h1>
-        <p class="header-subtitle">Seu painel de controle</p>
+        <h1>Gestão Inteligente</h1>
+        <p class="header-subtitle">Painel neutro e organizado para seu negócio</p>
       </div>
       <div class="header-actions">
         <div class="toolbar-actions">
-          <button class="ghost-btn" id="cloudBackupBtn" title="Backup na nuvem">☁️ Backup</button>
-          <button class="ghost-btn" id="syncBtn" title="Sincronizar">🔄 Sincronizar</button>
+          <button class="ghost-btn" id="cloudBackupBtn" title="Backup na nuvem">Backup</button>
+          <button class="ghost-btn" id="syncBtn" title="Sincronizar">Sincronizar</button>
           <span id="syncStatus" class="sync-status">Offline</span>
+          <span id="statusMessage" class="status-message hidden"></span>
         </div>
         <div class="user-profile">
           <span id="userDisplay">Usuário</span>
@@ -78,10 +79,10 @@
 
     <!-- Navegação por abas -->
     <nav class="tab-bar" role="tablist">
-      <button class="tab-button active" role="tab" data-panel="inventoryPanel">📦 Estoque</button>
-      <button class="tab-button" role="tab" data-panel="customersPanel">👥 Clientes</button>
-      <button class="tab-button" role="tab" data-panel="salesPanel">💳 Vendas</button>
-      <button class="tab-button" role="tab" data-panel="reportsPanel">📊 Relatórios</button>
+      <button class="tab-button active" role="tab" data-panel="inventoryPanel">Estoque</button>
+      <button class="tab-button" role="tab" data-panel="customersPanel">Clientes</button>
+      <button class="tab-button" role="tab" data-panel="salesPanel">Vendas</button>
+      <button class="tab-button" role="tab" data-panel="reportsPanel">Relatórios</button>
     </nav>
 
     <!-- Conteúdo principal -->

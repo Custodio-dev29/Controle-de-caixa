@@ -1,7 +1,9 @@
 ﻿// ==================== CONFIGURAÇÕES ====================
 const STORAGE_KEY = "gestaoInteligente";
 const MIN_PASSWORD_LENGTH = 6;
-const API_BASE = window.location.protocol.startsWith("http") ? `${window.location.origin}/api` : null;
+const API_BASE = window.location.protocol.startsWith("http")
+  ? `${window.location.origin}/api`
+  : "http://localhost:3000/api";
 
 // ==================== DOM CACHE ====================
 const dom = {
@@ -19,6 +21,7 @@ const dom = {
   syncBtn: document.getElementById("syncBtn"),
   exportPdfBtn: document.getElementById("exportPdfBtn"),
   syncStatus: document.getElementById("syncStatus"),
+  statusMessage: document.getElementById("statusMessage"),
   tabButtons: document.querySelectorAll(".tab-button"),
   inventorySearch: document.getElementById("inventorySearch"),
   customerSearch: document.getElementById("customerSearch"),
@@ -95,32 +98,15 @@ function showApp() {
 
 // ==================== PERSISTÊNCIA ====================
 function loadData() {
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    const data = JSON.parse(saved);
-    state.products = data.products || [];
-    state.customers = data.customers || [];
-    state.sales = data.sales || [];
-  } else {
-    state.products = [
-      { id: "p1", name: "Camiseta básica", sku: "SKU-001", quantity: 38, price: 49.9, category: "Vestuário" },
-      { id: "p2", name: "Calculadora financeira", sku: "SKU-002", quantity: 14, price: 129.9, category: "Eletrônicos" },
-      { id: "p3", name: "Caderno A4", sku: "SKU-003", quantity: 120, price: 8.5, category: "Papelaria" },
-    ];
-    state.customers = [
-      { id: "c1", name: "Ana Souza", email: "ana.souza@mail.com", phone: "(11) 91234-5678", city: "São Paulo", status: "Ativo" },
-      { id: "c2", name: "Carlos Lima", email: "carlos.lima@mail.com", phone: "(21) 99876-5432", city: "Rio de Janeiro", status: "Ativo" },
-    ];
-    state.sales = [];
-    saveData();
-  }
+  // Os dados são carregados a partir do backend em storage.json.
+  state.products = [];
+  state.customers = [];
+  state.sales = [];
 }
 
 function saveData() {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({ products: state.products, customers: state.customers, sales: state.sales })
-  );
+  // Os dados são salvos apenas no backend em storage.json.
+  console.warn("saveData() não grava no localStorage; use o backend para persistência.");
 }
 
 // ==================== UTILITÁRIOS ====================
@@ -157,9 +143,17 @@ function generateId(prefix) {
   return `${prefix}${Date.now()}${Math.floor(Math.random() * 1000)}`;
 }
 
+let notificationTimeout;
 function showNotification(message, type = "info") {
   console.log(`${type.toUpperCase()}: ${message}`);
-  alert(message);
+  if (!dom.statusMessage) return;
+  dom.statusMessage.textContent = message;
+  dom.statusMessage.className = `status-message ${type}`;
+  dom.statusMessage.classList.remove("hidden");
+  clearTimeout(notificationTimeout);
+  notificationTimeout = setTimeout(() => {
+    dom.statusMessage.classList.add("hidden");
+  }, 3000);
 }
 
 // ==================== BACKEND / API ====================
@@ -208,6 +202,9 @@ function setSyncStatus(online) {
   dom.syncStatus.classList.toggle("status-online", online);
   dom.cloudBackupBtn.disabled = !online;
   dom.syncBtn.disabled = !online;
+  if (!online) {
+    showNotification("Sem conexão com o backend.", "warning");
+  }
 }
 
 function authenticateBackend(email, password) {
@@ -230,11 +227,10 @@ async function syncData() {
     state.customers = remote.customers || [];
     state.sales = remote.sales || [];
     state.lastSync = new Date();
-    saveData();
     render();
-    showNotification("Sincronizado com backend com sucesso.");
+    showNotification("Sincronização concluída.", "success");
   } catch (error) {
-    showNotification(`Falha na sincronização: ${error.message}`, "error");
+    showNotification(`Falha na sincronização`, "error");
     setSyncStatus(false);
   }
 }
@@ -258,20 +254,21 @@ async function backupToCloud() {
 
 async function fetchRemoteState() {
   if (!state.apiAvailable) {
+    showNotification("Backend indisponível. Não é possível carregar dados.", "error");
     return;
   }
 
   try {
     const remote = await apiRequest("/sync");
-    state.products = remote.products || state.products;
-    state.customers = remote.customers || state.customers;
-    state.sales = remote.sales || state.sales;
+    state.products = remote.products || [];
+    state.customers = remote.customers || [];
+    state.sales = remote.sales || [];
     state.lastSync = new Date();
-    saveData();
     render();
     showNotification("Dados carregados do backend remoto.");
   } catch (error) {
     console.warn("Falha ao carregar dados remotos:", error);
+    showNotification("Erro ao carregar dados do backend.", "error");
   }
 }
 
@@ -574,34 +571,30 @@ async function saveRecord() {
     }
 
     if (errs.length) {
-      alert(errs.join("\n"));
+      showNotification(errs.join(" | "), "error");
+      return;
+    }
+
+    if (!state.apiAvailable) {
+      showNotification("Backend indisponível. Não é possível salvar produto.", "error");
       return;
     }
 
     if (id) {
-      if (state.apiAvailable) {
-        try {
-          const updated = await apiRequest(`/products/${id}`, { method: "PUT", body: data });
-          state.products = state.products.map((product) => (product.id === id ? updated : product));
-        } catch (error) {
-          showNotification(`Erro ao atualizar produto: ${error.message}`, "error");
-          return;
-        }
-      } else {
-        const idx = state.products.findIndex((p) => p.id === id);
-        if (idx >= 0) state.products[idx] = { ...state.products[idx], ...data };
+      try {
+        const updated = await apiRequest(`/products/${id}`, { method: "PUT", body: data });
+        state.products = state.products.map((product) => (product.id === id ? updated : product));
+      } catch (error) {
+        showNotification(`Erro ao atualizar produto: ${error.message}`, "error");
+        return;
       }
     } else {
-      if (state.apiAvailable) {
-        try {
-          const created = await apiRequest("/products", { method: "POST", body: data });
-          state.products.push(created);
-        } catch (error) {
-          showNotification(`Erro ao criar produto: ${error.message}`, "error");
-          return;
-        }
-      } else {
-        state.products.push({ id: generateId("p"), ...data });
+      try {
+        const created = await apiRequest("/products", { method: "POST", body: data });
+        state.products.push(created);
+      } catch (error) {
+        showNotification(`Erro ao criar produto: ${error.message}`, "error");
+        return;
       }
     }
   } else {
@@ -620,39 +613,34 @@ async function saveRecord() {
     }
 
     if (errs.length) {
-      alert(errs.join("\n"));
+      showNotification(errs.join(" | "), "error");
+      return;
+    }
+
+    if (!state.apiAvailable) {
+      showNotification("Backend indisponível. Não é possível salvar cliente.", "error");
       return;
     }
 
     if (id) {
-      if (state.apiAvailable) {
-        try {
-          const updated = await apiRequest(`/customers/${id}`, { method: "PUT", body: data });
-          state.customers = state.customers.map((customer) => (customer.id === id ? updated : customer));
-        } catch (error) {
-          showNotification(`Erro ao atualizar cliente: ${error.message}`, "error");
-          return;
-        }
-      } else {
-        const idx = state.customers.findIndex((c) => c.id === id);
-        if (idx >= 0) state.customers[idx] = { ...state.customers[idx], ...data };
+      try {
+        const updated = await apiRequest(`/customers/${id}`, { method: "PUT", body: data });
+        state.customers = state.customers.map((customer) => (customer.id === id ? updated : customer));
+      } catch (error) {
+        showNotification(`Erro ao atualizar cliente: ${error.message}`, "error");
+        return;
       }
     } else {
-      if (state.apiAvailable) {
-        try {
-          const created = await apiRequest("/customers", { method: "POST", body: data });
-          state.customers.push(created);
-        } catch (error) {
-          showNotification(`Erro ao criar cliente: ${error.message}`, "error");
-          return;
-        }
-      } else {
-        state.customers.push({ id: generateId("c"), ...data });
+      try {
+        const created = await apiRequest("/customers", { method: "POST", body: data });
+        state.customers.push(created);
+      } catch (error) {
+        showNotification(`Erro ao criar cliente: ${error.message}`, "error");
+        return;
       }
     }
   }
 
-  saveData();
   render();
   closeModal();
 }
@@ -660,45 +648,43 @@ async function saveRecord() {
 async function deleteRecord(type, id) {
   if (!confirm("Tem certeza?")) return;
 
-  if (type === "product") {
-    if (state.apiAvailable) {
-      try {
-        await apiRequest(`/products/${id}`, { method: "DELETE" });
-      } catch (error) {
-        showNotification(`Erro ao remover produto: ${error.message}`, "error");
-        return;
-      }
-    }
-    state.products = state.products.filter((p) => p.id !== id);
-  } else if (type === "customer") {
-    if (state.apiAvailable) {
-      try {
-        await apiRequest(`/customers/${id}`, { method: "DELETE" });
-      } catch (error) {
-        showNotification(`Erro ao remover cliente: ${error.message}`, "error");
-        return;
-      }
-    }
-    state.customers = state.customers.filter((c) => c.id !== id);
-  } else if (type === "sale") {
-    if (state.apiAvailable) {
-      try {
-        await apiRequest(`/sales/${id}`, { method: "DELETE" });
-      } catch (error) {
-        showNotification(`Erro ao remover venda: ${error.message}`, "error");
-        return;
-      }
-    }
-    state.sales = state.sales.filter((s) => s.id !== id);
+  if (!state.apiAvailable) {
+    showNotification("Backend indisponível. Não é possível remover o registro.", "error");
+    return;
   }
 
-  saveData();
+  if (type === "product") {
+    try {
+      await apiRequest(`/products/${id}`, { method: "DELETE" });
+      state.products = state.products.filter((p) => p.id !== id);
+    } catch (error) {
+      showNotification(`Erro ao remover produto: ${error.message}`, "error");
+      return;
+    }
+  } else if (type === "customer") {
+    try {
+      await apiRequest(`/customers/${id}`, { method: "DELETE" });
+      state.customers = state.customers.filter((c) => c.id !== id);
+    } catch (error) {
+      showNotification(`Erro ao remover cliente: ${error.message}`, "error");
+      return;
+    }
+  } else if (type === "sale") {
+    try {
+      await apiRequest(`/sales/${id}`, { method: "DELETE" });
+      state.sales = state.sales.filter((s) => s.id !== id);
+    } catch (error) {
+      showNotification(`Erro ao remover venda: ${error.message}`, "error");
+      return;
+    }
+  }
+
   render();
 }
 
 async function recordSale() {
   if (!state.customers.length || !state.products.length) {
-    alert("Cadastre clientes e produtos primeiro");
+    showNotification("Cadastre clientes e produtos primeiro", "warning");
     return;
   }
 
@@ -712,7 +698,7 @@ async function recordSale() {
   const product = state.products.find((p) => p.id === productId);
 
   if (!customer || !product || qty <= 0 || qty > product.quantity) {
-    alert("Dados inválidos ou estoque insuficiente");
+    showNotification("Dados inválidos ou estoque insuficiente", "error");
     return;
   }
 
@@ -726,22 +712,22 @@ async function recordSale() {
     type: "sale",
   };
 
-  if (state.apiAvailable) {
-    try {
-      const created = await apiRequest("/sales", { method: "POST", body: sale });
-      state.sales.push(created);
-    } catch (error) {
-      showNotification(`Erro ao registrar venda: ${error.message}`, "error");
-      return;
-    }
-  } else {
-    state.sales.push(sale);
+  if (!state.apiAvailable) {
+    showNotification("Backend indisponível. Não é possível registrar venda.", "error");
+    return;
+  }
+
+  try {
+    const created = await apiRequest("/sales", { method: "POST", body: sale });
+    state.sales.push(created);
+  } catch (error) {
+    showNotification(`Erro ao registrar venda: ${error.message}`, "error");
+    return;
   }
 
   product.quantity -= qty;
-  saveData();
   render();
-  alert("Venda registrada: " + formatCurrency(product.price * qty));
+  showNotification("Venda registrada com sucesso.", "success");
 }
 
 function setupEventListeners() {
@@ -799,30 +785,23 @@ async function handleLogin(e) {
     return;
   }
 
-  if (state.apiAvailable) {
-    try {
-      const response = await authenticateBackend(email, password);
-      state.authToken = response.token;
-      state.currentUser = response.user;
-      localStorage.setItem(`${STORAGE_KEY}_user`, JSON.stringify(state.currentUser));
-      localStorage.setItem(`${STORAGE_KEY}_token`, response.token);
-      showApp();
-      loadData();
-      render();
-      dom.loginForm.reset();
-      return;
-    } catch (error) {
-      dom.passwordError.textContent = error.message;
-      return;
-    }
+  if (!state.apiAvailable) {
+    dom.passwordError.textContent = "Backend indisponível. Conecte-se ao servidor local para continuar.";
+    return;
   }
 
-  state.currentUser = { email, name: email.split("@")[0] };
-  localStorage.setItem(`${STORAGE_KEY}_user`, JSON.stringify(state.currentUser));
-  showApp();
-  loadData();
-  render();
-  dom.loginForm.reset();
+  try {
+    const response = await authenticateBackend(email, password);
+    state.authToken = response.token;
+    state.currentUser = response.user;
+    localStorage.setItem(`${STORAGE_KEY}_user`, JSON.stringify(state.currentUser));
+    localStorage.setItem(`${STORAGE_KEY}_token`, response.token);
+    showApp();
+    await fetchRemoteState();
+    dom.loginForm.reset();
+  } catch (error) {
+    dom.passwordError.textContent = error.message;
+  }
 }
 
 async function handleOAuthLogin() {
@@ -838,7 +817,6 @@ async function handleOAuthLogin() {
     localStorage.setItem(`${STORAGE_KEY}_user`, JSON.stringify(state.currentUser));
     localStorage.setItem(`${STORAGE_KEY}_token`, response.token);
     showApp();
-    loadData();
     await fetchRemoteState();
     render();
   } catch (error) {
@@ -863,6 +841,10 @@ function registerServiceWorker() {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+  if (localStorage.getItem(STORAGE_KEY)) {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+
   const user = localStorage.getItem(`${STORAGE_KEY}_user`);
   if (user) {
     state.currentUser = JSON.parse(user);
@@ -870,8 +852,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (state.currentUser) {
     showApp();
-    loadData();
-    render();
   } else {
     showLogin();
   }
@@ -880,6 +860,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   await checkApiHealth();
   if (state.apiAvailable && state.currentUser) {
     await fetchRemoteState();
+  } else if (state.currentUser) {
+    showNotification("Backend não disponível. Dados não podem ser carregados.", "warning");
   }
   registerServiceWorker();
 

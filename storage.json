@@ -21,28 +21,20 @@
   ],
   "products": [
     {
-      "id": "p1",
-      "name": "Camiseta básica",
-      "sku": "SKU-001",
-      "quantity": 38,
-      "price": 49.9,
-      "category": "Vestuário"
-    },
-    {
-      "id": "p2",
-      "name": "Calculadora financeira",
-      "sku": "SKU-002",
-      "quantity": 14,
-      "price": 129.9,
-      "category": "Eletrônicos"
-    },
-    {
-      "id": "p1780357788792",
+      "id": "p1780359998699",
       "name": "Caneta",
       "sku": "sku-4",
       "quantity": 12,
       "price": 1215.2,
-      "category": "1223"
+      "category": "122"
+    },
+    {
+      "id": "p1780360035311",
+      "name": "Caneta 12",
+      "sku": "sku-4",
+      "quantity": 12,
+      "price": 1215.22,
+      "category": "1323"
     }
   ],
   "customers": [
